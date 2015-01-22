@@ -26,21 +26,23 @@ inline void RemoveUserData(OpenRAVE::InterfaceBase& body, const std::string& key
 inline OpenRAVE::KinBodyPtr GetEnvDataObject(OpenRAVE::EnvironmentBase& env) {
   OpenRAVE::KinBodyPtr trajopt_data = env.GetKinBody("__trajopt_data__");
   if (!trajopt_data) {
+    std::vector< OpenRAVE::Vector > svec;
     trajopt_data = OpenRAVE::RaveCreateKinBody(env.shared_from_this(), "");
     trajopt_data->SetName("__trajopt_data__");
+    trajopt_data->InitFromSpheres(svec, false);
     env.Add(trajopt_data);
   }
   return trajopt_data;
 }
 
 inline OpenRAVE::UserDataPtr GetUserData(OpenRAVE::EnvironmentBase& env, const std::string& key) {
-  GetUserData(*GetEnvDataObject(env), key);
+  return GetEnvDataObject(env)->GetUserData(key);
 }
 inline void SetUserData(OpenRAVE::EnvironmentBase& env, const std::string& key, OpenRAVE::UserDataPtr val) {
-  SetUserData(*GetEnvDataObject(env), key, val);
+  GetEnvDataObject(env)->SetUserData(key, val);
 }
 inline void RemoveUserData(OpenRAVE::EnvironmentBase& env, const std::string& key) {
-  RemoveUserData(*GetEnvDataObject(env), key);
+  GetEnvDataObject(env)->RemoveUserData(key);
 }
 
 #else // OPENRAVE_VERSION_MINOR > 8
