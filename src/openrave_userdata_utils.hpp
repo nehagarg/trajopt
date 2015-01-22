@@ -2,27 +2,50 @@
 #include "macros.h"
 #include <openrave/openrave.h>
 #include <map>
+#include <boost/make_shared.hpp>
 #include "utils/logging.hpp"
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
-class UserMap : public std::map<std::string, OpenRAVE::UserDataPtr>, public OpenRAVE::UserData {};
 
 namespace trajopt {
 
 #if OPENRAVE_VERSION_MINOR > 8
 
-inline OpenRAVE::UserDataPtr GetUserData(const OpenRAVE::KinBody& body, const std::string& key) {
+#define TRAJOPT_DATA ("__trajopt_data__")
+
+inline OpenRAVE::UserDataPtr GetUserData(const OpenRAVE::InterfaceBase& body, const std::string& key) {
   return body.GetUserData(key);
 }
-inline void SetUserData(OpenRAVE::KinBody& body, const std::string& key, OpenRAVE::UserDataPtr val) {
+inline void SetUserData(OpenRAVE::InterfaceBase& body, const std::string& key, OpenRAVE::UserDataPtr val) {
   body.SetUserData(key, val);
 }
-inline void RemoveUserData(OpenRAVE::KinBody& body, const std::string& key) {
+inline void RemoveUserData(OpenRAVE::InterfaceBase& body, const std::string& key) {
   body.RemoveUserData(key);
 }
 
+inline OpenRAVE::KinBodyPtr GetEnvDataObject(OpenRAVE::EnvironmentBase& env) {
+  OpenRAVE::KinBodyPtr trajopt_data = env.GetKinBody("__trajopt_data__");
+  if (!trajopt_data) {
+    trajopt_data = OpenRAVE::RaveCreateKinBody(env.shared_from_this(), "");
+    trajopt_data->SetName("__trajopt_data__");
+    env.Add(trajopt_data);
+  }
+  return trajopt_data;
+}
+
+inline OpenRAVE::UserDataPtr GetUserData(OpenRAVE::EnvironmentBase& env, const std::string& key) {
+  GetUserData(*GetEnvDataObject(env), key);
+}
+inline void SetUserData(OpenRAVE::EnvironmentBase& env, const std::string& key, OpenRAVE::UserDataPtr val) {
+  SetUserData(*GetEnvDataObject(env), key, val);
+}
+inline void RemoveUserData(OpenRAVE::EnvironmentBase& env, const std::string& key) {
+  RemoveUserData(*GetEnvDataObject(env), key);
+}
+
 #else // OPENRAVE_VERSION_MINOR > 8
+
+class UserMap : public std::map<std::string, OpenRAVE::UserDataPtr>, public OpenRAVE::UserData {};
 
 template <typename T>
 OpenRAVE::UserDataPtr GetUserData(const T& env, const std::string& key) {
