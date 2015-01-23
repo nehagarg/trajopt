@@ -538,7 +538,7 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
         SetCow(link.get(), new_cow.get());
         m_world->addCollisionObject(new_cow.get(), filterGroup);
         new_cow->setContactProcessingThreshold(m_contactDistance);
-        LOG_DEBUG("added collision object for  link %s", link->GetName().c_str());
+        LOG_DEBUG("added collision object for link %s", link->GetName().c_str());
         cd->links.push_back(link.get());
         cd->cows.push_back(new_cow);
       }
