@@ -4,6 +4,7 @@
 #include <map>
 #include <boost/make_shared.hpp>
 #include "utils/logging.hpp"
+#include <iostream>
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
@@ -14,12 +15,16 @@ namespace trajopt {
 #define TRAJOPT_DATA ("__trajopt_data__")
 
 inline OpenRAVE::UserDataPtr GetUserData(const OpenRAVE::InterfaceBase& body, const std::string& key) {
-  return body.GetUserData(key);
+  OpenRAVE::UserDataPtr val = body.GetUserData(key);
+  std::cout << ">>>> GET " << key << ": " << val << std::endl;
+  return val;
 }
 inline void SetUserData(OpenRAVE::InterfaceBase& body, const std::string& key, OpenRAVE::UserDataPtr val) {
+  std::cout << ">>>> SET " << key << ": " << val << std::endl;
   body.SetUserData(key, val);
 }
 inline void RemoveUserData(OpenRAVE::InterfaceBase& body, const std::string& key) {
+  std::cout << ">>>> REM " << key << std::endl;
   body.RemoveUserData(key);
 }
 
