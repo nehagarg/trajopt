@@ -15,25 +15,19 @@ namespace trajopt {
 #define TRAJOPT_DATA ("__trajopt_data__")
 
 inline OpenRAVE::UserDataPtr GetUserData(const OpenRAVE::InterfaceBase& body, const std::string& key) {
-  OpenRAVE::UserDataPtr val = body.GetUserData(key);
-  std::cout << ">>>> GET " << key << ": " << val << std::endl;
-  return val;
+  return body.GetUserData(key);
 }
 inline void SetUserData(OpenRAVE::InterfaceBase& body, const std::string& key, OpenRAVE::UserDataPtr val) {
-  std::cout << ">>>> SET " << key << ": " << val << std::endl;
   body.SetUserData(key, val);
 }
 inline void RemoveUserData(OpenRAVE::InterfaceBase& body, const std::string& key) {
-  std::cout << ">>>> REM " << key << std::endl;
   body.RemoveUserData(key);
 }
 
 inline OpenRAVE::KinBodyPtr GetEnvDataObject(OpenRAVE::EnvironmentBase& env) {
   OpenRAVE::KinBodyPtr trajopt_data = env.GetKinBody("__trajopt_data__");
   if (!trajopt_data) {
-    OpenRAVE::Vector v;
     std::vector< OpenRAVE::Vector > svec;
-    svec.push_back(v);
     trajopt_data = OpenRAVE::RaveCreateKinBody(env.shared_from_this(), "");
     trajopt_data->SetName("__trajopt_data__");
     trajopt_data->InitFromSpheres(svec, false);
