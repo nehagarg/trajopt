@@ -234,7 +234,13 @@ OptStatus BasicTrustRegionSQP::optimize() {
 
   OptStatus retval = INVALID;
 
+  // MC: define starting time
+  boost::posix_time::ptime acTime;
+  boost::posix_time::time_duration actDurTime;
+  double time_elapsed;
+
   for (int merit_increases=0; merit_increases < max_merit_coeff_increases_; ++merit_increases) { /* merit adjustment loop */
+
     for (int iter=1; ; ++iter) { /* sqp loop */
       callCallbacks(x_);
 
@@ -284,6 +290,20 @@ OptStatus BasicTrustRegionSQP::optimize() {
 //    }
 
       while (trust_box_size_ >= min_trust_box_size_) {
+          // MC: check if exceeding time
+          if(max_time_>0){
+            acTime = boost::posix_time::microsec_clock::local_time();
+            actDurTime = acTime - start_time_;
+            time_elapsed = actDurTime.total_microseconds() * 1e-6;
+//            std::cout << std::fixed << std::setprecision(6) << "TIME ELAPSED7: " << time_elapsed << std::endl;
+
+            if(time_elapsed>max_time_){
+                retval = OPT_FAILED;
+                std::cout << "Exceeded time!" << "Optimization time: " << time_elapsed << ". Max time: " << max_time_ << std::endl;
+                results_.x.clear();
+                return retval;
+            }
+          }
 
         setTrustBoxConstraints(x_);
         CvxOptStatus status = model_->optimize();

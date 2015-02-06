@@ -66,6 +66,10 @@ public:
 
   TrajPlotterPtr GetPlotter() {return m_trajplotter;}
 
+  // MC
+  void setMaxTime(const double mt){max_time=mt;}
+  double getMaxTime(){return max_time;}
+
   friend TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo&);
 
 private:
@@ -73,6 +77,9 @@ private:
   ConfigurationPtr m_rad;
   TrajArray m_init_traj;
   TrajPlotterPtr m_trajplotter;
+
+  // MC
+  double max_time;
 };
 
 void TRAJOPT_API SetupPlotting(TrajOptProb& prob, Optimizer& opt);
@@ -87,6 +94,8 @@ struct TRAJOPT_API TrajOptResult {
 struct BasicInfo  {
   bool start_fixed;
   int n_steps;
+  //MC
+  double max_time; // optional
   string manip;
   string robot; // optional
   IntVec dofs_fixed; // optional
@@ -227,6 +236,20 @@ struct JointVelConstraintInfo : public TermInfo, public MakesConstraint {
   void fromJson(const Value& v);
   void hatch(TrajOptProb& prob);
   DEFINE_CREATE(JointVelConstraintInfo)
+};
+
+// MC: create a pose constraint for more than one timestep
+struct PoseCostMultiInfo : public TermInfo, public MakesConstraint, public MakesCost {
+  DblVec vals;
+  Vector3d xyz;
+  std::vector<Vector3d> xyzVec;
+  std::vector<Vector4d> wxyzVec;
+  Vector3d pos_coeffs, rot_coeffs;
+  KinBody::LinkPtr link;
+  int first_step, last_step;
+  void fromJson(const Value& v);
+  void hatch(TrajOptProb& prob);
+  DEFINE_CREATE(PoseCostMultiInfo)
 };
 
 /**

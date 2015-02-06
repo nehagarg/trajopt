@@ -1,11 +1,18 @@
 #include "utils.hpp"
 #include "sco/solver_interface.hpp"
 #include <Eigen/Geometry>
+
 using namespace Eigen;
 
 namespace trajopt {
   
 TrajArray getTraj(const DblVec& x, const VarArray& vars) {
+  // MC
+  if(x.size()==0){
+      TrajArray out(0,0);
+      return out;
+  }
+
   TrajArray out(vars.rows(), vars.cols());
   for (int i=0; i < vars.rows(); ++i) {
     for (int j=0; j < vars.cols(); ++j) {
@@ -15,6 +22,12 @@ TrajArray getTraj(const DblVec& x, const VarArray& vars) {
   return out;
 }
 TrajArray getTraj(const DblVec& x, const AffArray& arr) {
+  //MC: maybe add this also here?
+//  if(x.size()==0){
+//      MatrixXd out(0,0);
+//      return out;
+//  }
+
   MatrixXd out(arr.rows(), arr.cols());
   for (int i=0; i < arr.rows(); ++i) {
     for (int j=0; j < arr.cols(); ++j) {

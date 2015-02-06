@@ -2,6 +2,10 @@
 #include <string>
 #include "modeling.hpp"
 #include <boost/function.hpp>
+#include <sys/time.h>
+// MC
+#include <boost/date_time.hpp>
+
 /*
  * Algorithms for non-convex, constrained optimization
  */
@@ -96,6 +100,8 @@ public:
   double merit_error_coeff_, // initial penalty coefficient
          trust_box_size_ // current size of trust region (component-wise)
          ;
+
+  boost::posix_time::ptime start_time_;
 
   BasicTrustRegionSQP();
   BasicTrustRegionSQP(OptProbPtr prob);

@@ -7,6 +7,7 @@ import openravepy
 import trajoptpy
 import json
 import time
+from trajoptpy.animate_traj import animate_traj
 
 env = openravepy.Environment()
 env.StopSimulation()
@@ -58,9 +59,12 @@ prob = trajoptpy.ConstructProblem(s, env) # create object that stores optimizati
 t_start = time.time()
 result = trajoptpy.OptimizeProblem(prob) # do optimization
 t_elapsed = time.time() - t_start
-print result
 print "optimization took %.3f seconds"%t_elapsed
 
 from trajoptpy.check_traj import traj_is_safe
 prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
 assert traj_is_safe(result.GetTraj(), robot) # Check that trajectory is collision free
+
+#MC
+traj = result.GetTraj()
+if args.interactive: animate_traj(traj, robot)

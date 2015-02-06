@@ -54,6 +54,9 @@ void RegisterMakers() {
   TermInfo::RegisterMaker("cart_vel", &CartVelCntInfo::create);
   TermInfo::RegisterMaker("joint_vel_limits", &JointVelConstraintInfo::create);
 
+  // MC
+  TermInfo::RegisterMaker("pose_multiple", &PoseCostMultiInfo::create);
+
   gRegisteredMakers = true;
 }
 
@@ -123,6 +126,8 @@ void BasicInfo::fromJson(const Json::Value& v) {
   childFromJson(v, manip, "manip");
   childFromJson(v, robot, "robot", string(""));
   childFromJson(v, dofs_fixed, "dofs_fixed", IntVec());
+  //MC: optional parameter for max_time
+  childFromJson(v, max_time, "max_time", -1.0);
   // TODO: optimization parameters, etc?
 }
 
@@ -244,6 +249,11 @@ TrajOptResult::TrajOptResult(OptResults& opt, TrajOptProb& prob) :
 TrajOptResultPtr OptimizeProblem(TrajOptProbPtr prob, bool plot) {
   Configuration::SaverPtr saver = prob->GetRAD()->Save();
   BasicTrustRegionSQP opt(prob);
+
+  // MC
+  opt.start_time_ = boost::posix_time::microsec_clock::local_time();
+  opt.max_time_  = prob->getMaxTime();
+
   opt.max_iter_ = 40;
   opt.min_approx_improve_frac_ = .001;
   opt.improve_ratio_threshold_ = .2;
@@ -253,15 +263,18 @@ TrajOptResultPtr OptimizeProblem(TrajOptProbPtr prob, bool plot) {
   }
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
+//  std::cout << "ResultSIZE: " << opt.results().x.size() << std::endl;
   return TrajOptResultPtr(new TrajOptResult(opt.results(), *prob));
 }
 
 TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo& pci) {
-
   const BasicInfo& bi = pci.basic_info;
   int n_steps = bi.n_steps;
 
   TrajOptProbPtr prob(new TrajOptProb(n_steps, pci.rad));
+  //MC
+  prob->setMaxTime(pci.basic_info.max_time);
+
   int n_dof = prob->m_rad->GetDOF();
 
   DblVec cur_dofvals = prob->m_rad->GetDOFValues();
@@ -400,6 +413,52 @@ void JointPosCostInfo::fromJson(const Value& v) {
 void JointPosCostInfo::hatch(TrajOptProb& prob) {
   prob.addCost(CostPtr(new JointPosCost(prob.GetVarRow(timestep), toVectorXd(vals), toVectorXd(coeffs))));
   prob.getCosts().back()->setName(name);  
+}
+
+// MC
+void PoseCostMultiInfo::fromJson(const Value& v) {
+  FAIL_IF_FALSE(v.isMember("params"));
+  const Value& params = v["params"];
+  childFromJson(params, first_step, "first_step");
+  childFromJson(params, last_step, "last_step");
+
+  FAIL_IF_FALSE((first_step >= 0) && (first_step <= gPCI->basic_info.n_steps-1) && (first_step < last_step));
+  // It seems it does have to be less than n_steps-1. I can constraint also the last step
+  FAIL_IF_FALSE((last_step > 0)); // && (last_step <= gPCI->basic_info.n_steps-1));
+
+  childFromJson(params, xyzVec, "xyz");
+  childFromJson(params, wxyzVec, "wxyz");
+  childFromJson(params, pos_coeffs,"pos_coeffs", (Vector3d)Vector3d::Ones());
+  childFromJson(params, rot_coeffs,"rot_coeffs", (Vector3d)Vector3d::Ones());
+
+//  for (int i=0;i<xyzVec.size();++i)
+//      std::cout << "Reading[" << i << "]: " << xyzVec[i] << std::endl;
+
+  FAIL_IF_FALSE(xyzVec.size()-1 == last_step - first_step && wxyzVec.size()-1 == last_step - first_step);
+
+  string linkstr;
+  childFromJson(params, linkstr, "link");
+  link = gPCI->rad->GetRobot()->GetLink(linkstr);
+  if (!link) {
+    PRINT_AND_THROW( boost::format("invalid link name: %s")%linkstr);
+  }
+
+  const char* all_fields[] = {"first_step", "last_step", "xyz", "wxyz", "pos_coeffs", "rot_coeffs","link"};
+  ensure_only_members(params, all_fields, sizeof(all_fields)/sizeof(char*));
+}
+
+void PoseCostMultiInfo::hatch(TrajOptProb& prob) {
+    for (int iStep = first_step; iStep < last_step; ++iStep) {
+        // Check the indices in wxyzVec[iStep-first_step] and xyzVec[iStep-first_step] if there should be a +1 inside
+        VectorOfVectorPtr f(new CartPoseErrCalculator(toRaveTransform(wxyzVec[iStep-first_step+1], xyzVec[iStep-first_step+1]), prob.GetRAD(), link));
+        // Check the indices in prob.GetVarRow(iStep) if there should be a +1 inside
+        if (term_type == TT_COST) {
+            prob.addCost(CostPtr(new CostFromErrFunc(f, prob.GetVarRow(iStep+1), concat(rot_coeffs, pos_coeffs), ABS, name)));
+        }
+        else if (term_type == TT_CNT) {
+            prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, prob.GetVarRow(iStep+1), concat(rot_coeffs, pos_coeffs), EQ, name)));
+        }
+    }
 }
 
 
