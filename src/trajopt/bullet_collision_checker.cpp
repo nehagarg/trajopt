@@ -136,6 +136,7 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
   btCollisionShape* subshape=0;
 
 #if OPENRAVE_VERSION_MINOR <= 8
+    #define GT_None 0
     #define GT_Box KinBody::Link::GEOMPROPERTIES::GeomBox 
     #define GT_Sphere KinBody::Link::GEOMPROPERTIES::GeomSphere 
     #define GT_Cylinder KinBody::Link::GEOMPROPERTIES::GeomCylinder 
@@ -144,6 +145,9 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
 #endif
 
   switch (geom->GetType()) {
+  case OpenRAVE::GT_None:
+    subshape = new btEmptyShape();
+    break;
   case OpenRAVE::GT_Box:
     subshape = new btBoxShape(toBt(geom->GetBoxExtents()));
     break;
@@ -157,7 +161,8 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
     subshape = new btCylinderShapeZ(btVector3(r, r, h));
     break;
   }
-  case OpenRAVE::GT_TriMesh: {
+  case OpenRAVE::GT_TriMesh:
+  {
     const OpenRAVE::TriMesh &mesh = geom->GetCollisionMesh();
     assert(mesh.indices.size() >= 3);
     boost::shared_ptr<btTriangleMesh> ptrimesh(new btTriangleMesh());
