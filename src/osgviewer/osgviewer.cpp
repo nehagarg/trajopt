@@ -74,6 +74,11 @@ osg::Node* osgNodeFromGeom(const KinBody::Link::Geometry& geom) {
 
   switch(geom.GetType()) {
 
+  // There is no geometry for this object
+  case KinBody::Link::GEOMPROPERTIES::GeomNone: {
+    break;
+  }
+  //  Geometry is defined like a Sphere
   case KinBody::Link::GEOMPROPERTIES::GeomSphere: {
 
     osg::Sphere* s = new osg::Sphere();
