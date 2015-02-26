@@ -135,15 +135,6 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
 
   btCollisionShape* subshape=0;
 
-#if OPENRAVE_VERSION_MINOR <= 8
-    #define GT_None 9999
-    #define GT_Box KinBody::Link::GEOMPROPERTIES::GeomBox 
-    #define GT_Sphere KinBody::Link::GEOMPROPERTIES::GeomSphere 
-    #define GT_Cylinder KinBody::Link::GEOMPROPERTIES::GeomCylinder 
-    #define GT_TriMesh KinBody::Link::GEOMPROPERTIES::GeomTrimesh 
-    #define TriMesh KinBody::Link::TRIMESH
-#endif
-
   switch (geom->GetType()) {
   case OpenRAVE::GT_None:
     subshape = new btEmptyShape();
