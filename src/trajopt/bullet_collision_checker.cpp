@@ -530,7 +530,26 @@ struct KinBodyCollisionData : public OpenRAVE::UserData {
 void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
   CDPtr cd(new KinBodyCollisionData(body));
 
-  int filterGroup = body->IsRobot() ? RobotFilter : KinBodyFilter;
+  // FIXME: This is a massive hack.
+  //
+  // The correct way to do this is to actually pass the robot that is being
+  // optimized as a parameter (otherwise there is no way to differentiate
+  // multiple 'robots' in  an environment, which is anything with
+  // articulation, including things like doors).
+  //
+  // Since we are already stuck in here, though, we will just add anything
+  // that is attached to the robot to the RobotFilter collision filter.  We
+  // can't just use IsRobot(), because that won't register grabbed objects.
+  std::set<KinBodyPtr> attached_set;
+  body->GetAttached(attached_set);
+  
+  int filterGroup = KinBodyFilter;
+  BOOST_FOREACH(const OR::KinBodyPtr& attached_body, attached_set) {
+    if (attached_body->IsRobot()) {
+      filterGroup = RobotFilter;
+    }
+  }
+
   const vector<OR::KinBody::LinkPtr> links = body->GetLinks();
 
   trajopt::SetUserData(*body, "bt", cd);
