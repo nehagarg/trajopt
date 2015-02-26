@@ -542,7 +542,7 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
   // can't just use IsRobot(), because that won't register grabbed objects.
   std::set<KinBodyPtr> attached_set;
   body->GetAttached(attached_set);
-  
+
   int filterGroup = KinBodyFilter;
   BOOST_FOREACH(const OR::KinBodyPtr& attached_body, attached_set) {
     if (attached_body->IsRobot()) {
