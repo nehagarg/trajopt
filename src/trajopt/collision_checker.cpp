@@ -38,30 +38,30 @@ bool CollisionPairIgnorer::CanCollide(const KinBody::Link& link1, const KinBody:
 }
 #endif
 
-void CollisionChecker::IgnoreZeroStateSelfCollisions(OpenRAVE::KinBodyPtr body) {
-  LOG_DEBUG("IgnoreZeroStateSelfCollisions for %s", body->GetName().c_str());
-  KinBody::KinBodyStateSaver saver(body);
-  body->SetDOFValues(DblVec(body->GetDOF(), 0));
-  body->SetTransform(Transform(Vector(1,0,0,0), (Vector(0,0,10))));
+void CollisionChecker::IgnoreSelfCollisions(OpenRAVE::KinBodyPtr body) {
+  LOG_DEBUG("IgnoreSelfCollisions for %s", body->GetName().c_str());
+  const std::vector<KinBody::LinkPtr>& links = body->GetLinks();
 
+  // Copy self-collision link information from the kinbody.
+  const std::set<int> &non_adjacent_links = body->GetNonAdjacentLinks(0);
+  BOOST_FOREACH(int link_pair, non_adjacent_links) {
+    int const i = ((link_pair >> 0) & 0xFFFF);
+    int const j = ((link_pair >> 16) & 0xFFFF);
 
-  vector<Collision> collisions;
-  BodyVsAll(*body,  collisions);
-  LOG_DEBUG("%li extra self collisions in zero state", collisions.size());
-  for(int i=0; i < collisions.size(); ++i) {
-    LOG_DEBUG("ignoring self-collision: %s %s", collisions[i].linkA->GetName().c_str(), collisions[i].linkB->GetName().c_str());
-    ExcludeCollisionPair(*collisions[i].linkA, *collisions[i].linkB);
+    LOG_DEBUG("ignoring self-collision: %s %s",
+              links[i]->GetName().c_str(), links[j]->GetName().c_str());
+    ExcludeCollisionPair(*links[i], *links[j]);
   }
   LOG_DEBUG("------");
 }
 
-void CollisionChecker::IgnoreZeroStateSelfCollisions() {
+void CollisionChecker::IgnoreSelfCollisions() {
 
   vector<KinBodyPtr> bodies;
   GetEnv()->GetBodies(bodies);
 
   BOOST_FOREACH(const KinBodyPtr& body, bodies) {
-    IgnoreZeroStateSelfCollisions(body);
+    IgnoreSelfCollisions(body);
   }
 }
 

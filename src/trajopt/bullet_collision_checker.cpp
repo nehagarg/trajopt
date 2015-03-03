@@ -641,7 +641,7 @@ void BulletCollisionChecker::UpdateBulletFromRave() {
     float contactDistanceOld = GetContactDistance();
     SetContactDistance(.1 METERS);
     BOOST_FOREACH(const KinBodyPtr& body, addedBodies) {
-      IgnoreZeroStateSelfCollisions(body);
+      IgnoreSelfCollisions(body);
     }
     SetContactDistance(contactDistanceOld);
     UpdateAllowedCollisionMatrix();
