@@ -52,6 +52,31 @@ void CollisionChecker::IgnoreSelfCollisions(OpenRAVE::KinBodyPtr body) {
               links[i]->GetName().c_str(), links[j]->GetName().c_str());
     ExcludeCollisionPair(*links[i], *links[j]);
   }
+
+  // Add grabbed-object adjacency information if the object is a robot.
+  if (body->IsRobot()) {
+    OpenRAVE::RobotBasePtr robot = boost::dynamic_pointer_cast<RobotBase>(body);
+
+    std::vector<OpenRAVE::KinBodyPtr> grabbed_bodies;
+    robot->GetGrabbed(grabbed_bodies);
+
+    BOOST_FOREACH(const OpenRAVE::KinBodyPtr &grabbed_body, grabbed_bodies) {
+      std::list<KinBody::LinkConstPtr> ignore_links;
+      robot->GetIgnoredLinksOfGrabbed(grabbed_body, ignore_links); 
+      
+      BOOST_FOREACH(const KinBody::LinkConstPtr& robot_link, ignore_links) {
+        LOG_DEBUG("ignoring grabbed-collision: %s %s",
+                  grabbed_body->GetName().c_str(),
+                  robot_link->GetName().c_str());
+
+        BOOST_FOREACH(const KinBody::LinkPtr& grabbed_link,
+                      grabbed_body->GetLinks()) {
+          ExcludeCollisionPair(*grabbed_link, *robot_link);
+        }
+      }
+    }
+  }
+
   LOG_DEBUG("------");
 }
 
