@@ -528,7 +528,18 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
   // multiple 'robots' in  an environment, which is anything with
   // articulation, including things like doors).
   //
-  int filterGroup = body->IsRobot() ? RobotFilter : KinBodyFilter;
+  // Since we are already stuck in here, though, we will just add anything
+  // that is attached to the robot to the RobotFilter collision filter.  We
+  // can't just use IsRobot(), because that won't register grabbed objects.
+  std::set<KinBodyPtr> attached_set;
+  body->GetAttached(attached_set);
+  
+  int filterGroup = KinBodyFilter;
+  BOOST_FOREACH(const OR::KinBodyPtr& attached_body, attached_set) {
+    if (attached_body->IsRobot()) {
+      filterGroup = RobotFilter;
+    }
+  }
 
   const vector<OR::KinBody::LinkPtr> links = body->GetLinks();
 
