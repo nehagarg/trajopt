@@ -655,6 +655,9 @@ void BulletCollisionChecker::UpdateBulletFromRave() {
   for (int i=0; i < objs.size(); ++i) {
     CollisionObjectWrapper* cow = static_cast<CollisionObjectWrapper*>(objs[i]);
     cow->setWorldTransform(toBt(cow->m_link->GetTransform()));
+    cow->setCollisionFlags(cow->m_link->IsEnabled()
+                           ? btCollisionObject::CF_STATIC_OBJECT 
+                           : btCollisionObject::CF_NO_CONTACT_RESPONSE);
   }
 
 }
