@@ -63,15 +63,26 @@ struct ScalarFuncFromPy : public ScalarOfVector {
   py::object m_pyfunc;
   ScalarFuncFromPy(py::object pyfunc) : m_pyfunc(pyfunc) {}
   double operator()(const VectorXd& x) const {
-    return py::extract<double>(m_pyfunc(toNdarray1<double>(x.data(), x.size())));
+    double result;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    {
+      result = py::extract<double>(m_pyfunc(toNdarray1<double>(x.data(), x.size())));
+    }
+    PyGILState_Release(gstate);
+    return result;
   }
 };
 struct VectorFuncFromPy : public VectorOfVector {
   py::object m_pyfunc;
   VectorFuncFromPy(py::object pyfunc) : m_pyfunc(pyfunc) {}
   VectorXd operator()(const VectorXd& x) const {
-    py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())), "float64");
-    VectorXd out = Map<const VectorXd>(getPointer<double>(outarr), py::extract<int>(outarr.attr("size")));
+    VectorXd out;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    {
+      py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())), "float64");
+      out = Map<const VectorXd>(getPointer<double>(outarr), py::extract<int>(outarr.attr("size")));
+    }
+    PyGILState_Release(gstate);
     return out;
   }
 };
@@ -79,9 +90,14 @@ struct MatrixFuncFromPy : public MatrixOfVector {
   py::object m_pyfunc;
   MatrixFuncFromPy(py::object pyfunc) : m_pyfunc(pyfunc) {}
   MatrixXd operator()(const VectorXd& x) const {
-    py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())),"float64");
-    py::object shape = outarr.attr("shape");
-    MatrixXd out = Map<const MatrixXd>(getPointer<double>(outarr), py::extract<int>(shape[0]), py::extract<int>(shape[1]));
+    MatrixXd out;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    {
+      py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())),"float64");
+      py::object shape = outarr.attr("shape");
+      out = Map<const MatrixXd>(getPointer<double>(outarr), py::extract<int>(shape[0]), py::extract<int>(shape[1]));
+    }
+    PyGILState_Release(gstate);
     return out;
   }
 };
@@ -148,9 +164,16 @@ Json::Value readJsonFile(const std::string& doc) {
 }
 
 PyTrajOptProb PyConstructProblem(const std::string& json_string, py::object py_env) {
+  TrajOptProbPtr cpp_prob;
   EnvironmentBasePtr cpp_env = GetCppEnv(py_env);
-  Json::Value json_root = readJsonFile(json_string);
-  TrajOptProbPtr cpp_prob = ConstructProblem(json_root, cpp_env);
+
+  Py_BEGIN_ALLOW_THREADS
+  {
+    Json::Value json_root = readJsonFile(json_string);
+    cpp_prob = ConstructProblem(json_root, cpp_env);
+  }
+  Py_END_ALLOW_THREADS
+
   return PyTrajOptProb(cpp_prob);
 }
 
@@ -194,7 +217,16 @@ public:
 };
 
 PyTrajOptResult PyOptimizeProblem(PyTrajOptProb& prob) {
-  return OptimizeProblem(prob.m_prob, gInteractive);
+  TrajOptResultPtr result;
+  TrajOptProbPtr p = prob.m_prob;
+  
+  Py_BEGIN_ALLOW_THREADS
+  {
+    result = OptimizeProblem(prob.m_prob, gInteractive);
+  }
+  Py_END_ALLOW_THREADS
+  
+  return PyTrajOptResult(result);
 }
 
 
