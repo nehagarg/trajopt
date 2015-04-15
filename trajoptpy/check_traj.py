@@ -15,8 +15,9 @@ def traj_collisions(traj, robot, n=100):
     with robot:
         for (i, row) in enumerate(traj_up):
             robot.SetActiveDOFValues(row)
-            col_now = env.CheckCollision(robot)
-            if col_now:
+            col_env = env.CheckCollision(robot)
+            col_self = robot.CheckSelfCollision()
+            if col_env and col_self:
                 col_times.append(i)
         return col_times
 
