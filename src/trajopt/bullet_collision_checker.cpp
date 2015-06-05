@@ -318,7 +318,7 @@ class BulletCollisionChecker : public CollisionChecker {
   btBroadphaseInterface* m_broadphase;
   btCollisionDispatcher* m_dispatcher;
   btCollisionConfiguration* m_coll_config;
-  typedef map<const OR::KinBody::Link*, CollisionObjectWrapper*> Link2Cow;
+  typedef map<const OR::KinBody::Link*, COWPtr> Link2Cow;
   Link2Cow m_link2cow;
   double m_contactDistance;
   vector<KinBodyPtr> m_prevbodies;
@@ -336,12 +336,12 @@ public:
   virtual void PlotCollisionGeometry(vector<OpenRAVE::GraphHandlePtr>& handles);
   virtual void ExcludeCollisionPair(const KinBody::Link& link0, const KinBody::Link& link1) {
     m_excludedPairs.insert(LinkPair(&link0, &link1));
-    COW *cow0 = GetCow(&link0), *cow1 = GetCow(&link1);
+    COWPtr cow0 = GetCow(&link0), cow1 = GetCow(&link1);
     if (cow0 && cow1) m_allowedCollisionMatrix(cow0->m_index, cow1->m_index) = 0;
   }
   virtual void IncludeCollisionPair(const KinBody::Link& link0, const KinBody::Link& link1) {
     m_excludedPairs.erase(LinkPair(&link0, &link1));
-    COW *cow0 = GetCow(&link0), *cow1 = GetCow(&link1);
+    COWPtr cow0 = GetCow(&link0), cow1 = GetCow(&link1);
     if (cow0 && cow1) m_allowedCollisionMatrix(cow0->m_index, cow1->m_index) = 1;
   }
   // collision checking
@@ -353,11 +353,11 @@ public:
   ////
   ///////
 
-  CollisionObjectWrapper* GetCow(const KinBody::Link* link) {
+  COWPtr GetCow(const KinBody::Link* link) {
     Link2Cow::iterator it = m_link2cow.find(link);
-    return (it == m_link2cow.end()) ? 0 : it->second;
+    return (it == m_link2cow.end()) ? COWPtr() : it->second;
   }
-  void SetCow(const KinBody::Link* link, COW* cow) {m_link2cow[link] = cow;}
+  void SetCow(const KinBody::Link* link, COWPtr cow) {m_link2cow[link] = cow;}
   void LinkVsAll_NoUpdate(const KinBody::Link& link, vector<Collision>& collisions, short filterMask);
   void UpdateBulletFromRave();
   void AddKinBody(const OR::KinBodyPtr& body);
@@ -503,10 +503,10 @@ void BulletCollisionChecker::LinkVsAll(const KinBody::Link& link, vector<Collisi
 
 void BulletCollisionChecker::LinkVsAll_NoUpdate(const KinBody::Link& link, vector<Collision>& collisions, short filterMask) {
   if (link.GetGeometries().empty()) return;
-  CollisionObjectWrapper* cow = GetCow(&link);
-  CollisionCollector cc(collisions, cow, this);
+  COWPtr cow = GetCow(&link);
+  CollisionCollector cc(collisions, cow.get(), this);
   cc.m_collisionFilterMask = filterMask;
-  m_world->contactTest(cow, cc);
+  m_world->contactTest(cow.get(), cc);
 }
 
 struct KinBodyCollisionData;
@@ -550,7 +550,7 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
     if (link->GetGeometries().size() > 0) {
       COWPtr new_cow = CollisionObjectFromLink(link, useTrimesh); 
       if (new_cow) {
-        SetCow(link.get(), new_cow.get());
+        SetCow(link.get(), new_cow);
         m_world->addCollisionObject(new_cow.get(), filterGroup);
         new_cow->setContactProcessingThreshold(m_contactDistance);
         LOG_DEBUG("added collision object for link %s", link->GetName().c_str());
@@ -567,10 +567,10 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
 void BulletCollisionChecker::RemoveKinBody(const OR::KinBodyPtr& body) {
   LOG_DEBUG("removing %s", body->GetName().c_str());
   BOOST_FOREACH(const OR::KinBody::LinkPtr& link, body->GetLinks()) {
-    CollisionObjectWrapper* cow = GetCow(link.get());
+    COWPtr cow = GetCow(link.get());
     if (cow) {
-      m_world->removeCollisionObject(cow);
-      m_link2cow.erase(link.get());      
+      m_world->removeCollisionObject(cow.get());
+      m_link2cow.erase(link.get());
     }
   }
   trajopt::RemoveUserData(*body, "bt");
@@ -622,8 +622,8 @@ void BulletCollisionChecker::UpdateAllowedCollisionMatrix() {
   BOOST_FOREACH(const LinkPair& pair, m_excludedPairs) {
     const KinBody::Link* linkA = pair.first;
     const KinBody::Link* linkB = pair.second;
-    const CollisionObjectWrapper* cowA = GetCow(linkA);
-    const CollisionObjectWrapper* cowB = GetCow(linkB);
+    const COWPtr cowA = GetCow(linkA);
+    const COWPtr cowB = GetCow(linkB);
     if (cowA != NULL && cowB != NULL) {
       m_allowedCollisionMatrix(cowA->m_index, cowB->m_index) = 0;
       m_allowedCollisionMatrix(cowB->m_index, cowA->m_index) = 0;
@@ -726,10 +726,10 @@ void BulletCollisionChecker::ContinuousCheckTrajectory(const TrajArray& traj, Co
   // don't need to remove them anymore because now I only check collisions
   // against KinBodyFilter stuff
   // remove them, because we can't check moving stuff against each other
-  vector<CollisionObjectWrapper*> cows;
+  vector<COWPtr> cows;
   BOOST_FOREACH(KinBody::LinkPtr& link, links) {
-    CollisionObjectWrapper* cow = GetCow(link.get());
-    assert(cow != NULL);
+    COWPtr cow = GetCow(link.get());
+    assert(cow);
     cows.push_back(cow);
 #if 0
     m_world->removeCollisionObject(cow);
@@ -1024,8 +1024,8 @@ void BulletCollisionChecker::CastVsAll(Configuration& rad, const vector<KinBody:
 
   for (int i=0; i < nlinks; ++i) {
     assert(m_link2cow[links[i].get()] != NULL);
-    CollisionObjectWrapper* cow = m_link2cow[links[i].get()];
-    CheckShapeCast(cow->getCollisionShape(), tbefore[i], tafter[i], cow, m_world, collisions);
+    COWPtr cow = m_link2cow[links[i].get()];
+    CheckShapeCast(cow->getCollisionShape(), tbefore[i], tafter[i], cow.get(), m_world, collisions);
   }
   LOG_DEBUG("CastVsAll checked %li links and found %li collisions", links.size(), collisions.size());
 }
