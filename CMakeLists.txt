@@ -22,7 +22,11 @@ endif()
 
 find_package(Eigen REQUIRED)
 find_package(Boost COMPONENTS system python thread program_options REQUIRED)
+
 find_package(OpenRAVE REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenRAVE_CXX_FLAGS}")
+include_directories(SYSTEM ${OpenRAVE_INCLUDE_DIRS})
+link_directories(${OpenRAVE_LIBRARY_DIRS})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
