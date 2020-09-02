@@ -18,7 +18,7 @@ using namespace OpenRAVE;
 
 namespace {
 
-#define METERS 
+#define METERS
 // there's some scale-dependent parameters. By convention I'll put METERS to mark it
 const float MARGIN = 0;
 
@@ -196,8 +196,8 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
           convexShape->addPoint(toBt(mesh.vertices[i]));
         break;
       }
-      
-    }     
+
+    }
   }
   default:
     assert(0 && "unrecognized collision shape type");
@@ -489,7 +489,7 @@ void BulletCollisionChecker::LinksVsAll(const vector<KinBody::LinkPtr>& links, v
 
   UpdateBulletFromRave();
   m_world->updateAabbs();
-  
+
   for (int i=0; i < links.size(); ++i) {
     LinkVsAll_NoUpdate(*links[i], collisions, filterMask);
   }
@@ -533,7 +533,7 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
   // can't just use IsRobot(), because that won't register grabbed objects.
   std::set<KinBodyPtr> attached_set;
   body->GetAttached(attached_set);
-  
+
   int filterGroup = KinBodyFilter;
   BOOST_FOREACH(const OR::KinBodyPtr& attached_body, attached_set) {
     if (attached_body->IsRobot()) {
@@ -544,11 +544,11 @@ void BulletCollisionChecker::AddKinBody(const OR::KinBodyPtr& body) {
   const vector<OR::KinBody::LinkPtr> links = body->GetLinks();
 
   trajopt::SetUserData(*body, "bt", cd);
-  
-  bool useTrimesh = trajopt::GetUserData(*body, "bt_use_trimesh");
+
+  bool useTrimesh = bool(trajopt::GetUserData(*body, "bt_use_trimesh"));
   BOOST_FOREACH(const OR::KinBody::LinkPtr& link, links) {
     if (link->GetGeometries().size() > 0) {
-      COWPtr new_cow = CollisionObjectFromLink(link, useTrimesh); 
+      COWPtr new_cow = CollisionObjectFromLink(link, useTrimesh);
       if (new_cow) {
         SetCow(link.get(), new_cow);
         m_world->addCollisionObject(new_cow.get(), filterGroup);
@@ -656,7 +656,7 @@ void BulletCollisionChecker::UpdateBulletFromRave() {
     CollisionObjectWrapper* cow = static_cast<CollisionObjectWrapper*>(objs[i]);
     cow->setWorldTransform(toBt(cow->m_link->GetTransform()));
     cow->setCollisionFlags(cow->m_link->IsEnabled()
-                           ? btCollisionObject::CF_STATIC_OBJECT 
+                           ? btCollisionObject::CF_STATIC_OBJECT
                            : btCollisionObject::CF_NO_CONTACT_RESPONSE);
   }
 
@@ -883,7 +883,7 @@ public:
   virtual const char* getName() const {return "CastHull";}
   virtual btVector3 localGetSupportingVertexWithoutMargin(const btVector3& v) const {return localGetSupportingVertex(v);}
 
-  void calculateContactTime(Collision& col) {    
+  void calculateContactTime(Collision& col) {
     // float support0 = localGetSupportingVertex(col.)
   }
 
@@ -892,7 +892,7 @@ public:
 
 struct CastCollisionCollector : public CollisionCollector {
   CastCollisionCollector(vector<Collision>& collisions, CollisionObjectWrapper* cow, BulletCollisionChecker* cc) :
-    CollisionCollector(collisions, cow, cc) {}  
+    CollisionCollector(collisions, cow, cc) {}
   virtual btScalar addSingleResult(btManifoldPoint& cp,
       const btCollisionObjectWrapper* colObj0Wrap,int partId0,int index0,
       const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1);
@@ -901,7 +901,7 @@ struct CastCollisionCollector : public CollisionCollector {
 
 btScalar CastCollisionCollector::addSingleResult(btManifoldPoint& cp,
     const btCollisionObjectWrapper* colObj0Wrap,int partId0,int index0,
-    const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1) {      
+    const btCollisionObjectWrapper* colObj1Wrap,int partId1,int index1) {
       float retval = CollisionCollector::addSingleResult(cp, colObj0Wrap,partId0,index0, colObj1Wrap,partId1,index1); // call base class func
       if (retval == 1) { // if contact was added
         bool castShapeIsFirst =  (colObj0Wrap->getCollisionObject() == m_cow);
@@ -956,7 +956,7 @@ btScalar CastCollisionCollector::addSingleResult(btManifoldPoint& cp,
         }
         else {
           const btVector3& ptOnCast = castShapeIsFirst ? cp.m_positionWorldOnA : cp.m_positionWorldOnB;
-          float l0c = (ptOnCast - ptWorld0).length(), 
+          float l0c = (ptOnCast - ptWorld0).length(),
                 l1c = (ptOnCast - ptWorld1).length();
 
           col.ptB = toOR(ptWorld0);
@@ -970,13 +970,13 @@ btScalar CastCollisionCollector::addSingleResult(btManifoldPoint& cp,
             col.time = .5;
           }
           else {
-            col.time = l0c/(l0c + l1c); 
+            col.time = l0c/(l0c + l1c);
           }
 
         }
-          
+
       }
-      return retval;          
+      return retval;
 }
 
 void BulletCollisionChecker::CheckShapeCast(btCollisionShape* shape, const btTransform& tf0, const btTransform& tf1,
